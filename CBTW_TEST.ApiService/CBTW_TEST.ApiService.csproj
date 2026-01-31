@@ -7,10 +7,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Dapr.Client" Version="1.14.0" />
+    <PackageReference Include="Dapr.Workflow" Version="1.14.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="6.6.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CBTW_TEST.Core\CBTW_TEST.Core.csproj" />
     <ProjectReference Include="..\CBTW_TEST.ServiceDefaults\CBTW_TEST.ServiceDefaults.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\CBTW_TEST.Services\CBTW_TEST.Services.csproj" />
   </ItemGroup>
 
 </Project>

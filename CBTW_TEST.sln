@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36518.9 d17.14
+VisualStudioVersion = 17.14.36518.9
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CBTW_TEST.AppHost", "CBTW_TEST.AppHost\CBTW_TEST.AppHost.csproj", "{365C2AC7-2B8B-4108-BBE3-CC5610313A9C}"
 EndProject
@@ -15,6 +15,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CBTW_TEST.Core", "CBTW_TEST.Core\CBTW_TEST.Core.csproj", "{CFD375E5-A5EA-46D7-B01C-A912D87BB040}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CBTW_TEST.Domain", "CBTW_TEST.Domain\CBTW_TEST.Domain.csproj", "{0F39178C-9C24-4033-A355-D61151BF1F52}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CBTW_TEST.Services", "CBTW_TEST.Services\CBTW_TEST.Services.csproj", "{EF29537A-B447-4DBE-9DCE-658D570355DC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -50,6 +52,10 @@ Global
 		{0F39178C-9C24-4033-A355-D61151BF1F52}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0F39178C-9C24-4033-A355-D61151BF1F52}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0F39178C-9C24-4033-A355-D61151BF1F52}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EF29537A-B447-4DBE-9DCE-658D570355DC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EF29537A-B447-4DBE-9DCE-658D570355DC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EF29537A-B447-4DBE-9DCE-658D570355DC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EF29537A-B447-4DBE-9DCE-658D570355DC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,33 +1,66 @@
+using Asp.Versioning;
+using CBTW_TEST.Core.Activities.Match;
+using CBTW_TEST.Core.Workflows.Match;
+using CBTW_TEST.Services.Http;
+using Dapr.Workflow;
+using Microsoft.AspNetCore.Authorization;
+using System.Reflection;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add service defaults & Aspire client integrations.
-builder.AddServiceDefaults();
+builder.Services.AddCors(options =>
+{
+options.AddDefaultPolicy(
+    policy =>
+{
+policy.AllowAnyHeader();
+policy.AllowAnyOrigin();
+policy.AllowAnyMethod();
+});
+});
 
-// Add services to the container.
-builder.Services.AddProblemDetails();
+builder.AddServiceDefaults();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddControllers();
+// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddControllers();
+builder.Services.AddTransient<OpenLibraryApiClient>();
+builder.Services.AddDaprWorkflow(options =>
+{
+    options.RegisterWorkflow<LibraryDiscoveryWorkflow>();
+    
+    options.RegisterActivity<ExtractSearchEntitiesActivity>();
+    options.RegisterActivity<SearchOpenLibraryActivity>();
+    options.RegisterActivity<RankAndExplainActivity>();
+});
+
+
+builder.Services.AddLogging();
+
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 app.UseExceptionHandler();
 
-string[] summaries = ["Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"];
-
-app.MapGet("/weatherforecast", () =>
+app.UseCors(policy =>
 {
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
-
+    policy.AllowAnyHeader();
+    policy.AllowAnyOrigin();
+    policy.AllowAnyMethod();
+}
+);
 app.MapDefaultEndpoints();
+
+app.UseSwagger();
+
+app.UseHttpsRedirection();
+
+app.UseAuthorization();
+
+app.MapControllers();
+
 
 app.Run();
 

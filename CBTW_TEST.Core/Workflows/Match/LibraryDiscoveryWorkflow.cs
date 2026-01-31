@@ -23,7 +23,7 @@ namespace CBTW_TEST.Core.Workflows.Match
 
                 // 3. API Activity: Buscar candidatos en Open Library
                 // Aquí normalizamos y consultamos la API REST
-                var rawCandidates = await context.CallActivityAsync<List<OpenLibraryBookDto>>(
+                var rawCandidates = await context.CallActivityAsync<List<OpenLibraryDocDto>>(
                     nameof(SearchOpenLibraryActivity), hypothesis);
 
                 // 4. IA Activity: Rankear y Explicar
