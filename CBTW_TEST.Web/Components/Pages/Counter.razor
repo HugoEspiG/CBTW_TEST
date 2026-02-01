@@ -11,7 +11,7 @@
     <div class="row justify-content-center mb-5">
         <div class="col-md-8">
             <div class="input-group input-group-lg shadow-sm">
-                <input type="text" @bind="messyInput" class="form-control" placeholder="Ex: find hobbit books by tolkien..." @onkeyup="HandleKeyUp" />
+                <input type="text" @bind="messyInput" class="form-control" placeholder="Ex: The Hobbit by tolkien..." @onkeyup="HandleKeyUp" />
                 <button class="btn btn-primary px-4" @onclick="StartDiscovery" disabled="@isProcessing">
                     @if (isProcessing)
                     {
