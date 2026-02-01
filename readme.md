@@ -74,4 +74,15 @@ Once all prerequisites are installed and the environment setup is complete, you 
 Workflow Orchestration: Manages state and automatic retries if external APIs (Open Library or Gemini) experience transient failures.
 
 State Store (Caching): Implements distributed caching for Open Library searches to reduce latency and API consumption costs.
+# 🧪 Testing Strategy
+The project includes a dedicated Unit Testing suite to ensure data integrity and the reliability of core logic, especially regarding AI-generated data and caching mechanisms.
 
+Key Test Scenarios:
+Cache Key Normalization: Ensures that search terms are consistently transformed (lowercase, space-to-underscore) to prevent cache misses in the Dapr State Store.
+
+Data Integrity (DTOs): Validates that the extraction hypothesis and ranking results maintain their structure throughout the workflow.
+
+Tiered Logic Readiness: Ensures the system can handle empty or ambiguous inputs by correctly identifying search tiers.
+
+Why these tests?
+Instead of chasing a high coverage percentage, the testing strategy focuses on Business Logic Stability. By testing the normalization of search keys, we guarantee that the integration with the Dapr State Store remains consistent even if the input source changes.

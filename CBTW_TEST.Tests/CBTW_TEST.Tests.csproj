@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CBTW_TEST.AppHost\CBTW_TEST.AppHost.csproj" />
+    <ProjectReference Include="..\CBTW_TEST.Domain\CBTW_TEST.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>

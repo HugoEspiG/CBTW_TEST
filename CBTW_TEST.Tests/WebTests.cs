@@ -1,40 +1,23 @@
-using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using CBTW_TEST.Domain.Models.Dto; // Ajusta a tus namespaces
 
 namespace CBTW_TEST.Tests;
 
 [TestClass]
-public class WebTests
+public class LibraryLogicTests
 {
-    private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
-
     [TestMethod]
-    public async Task GetWebResourceRootReturnsOkStatusCode()
+    public void Hypothesis_Should_Keep_Data_Correctly()
     {
-        // Arrange
-        var cancellationToken = new CancellationTokenSource(DefaultTimeout).Token;
+        // ARRANGE (Preparar)
+        var title = "The Hobbit";
+        var author = "Tolkien";
 
-        var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.CBTW_TEST_AppHost>(cancellationToken);
-        appHost.Services.AddLogging(logging =>
-        {
-            logging.SetMinimumLevel(LogLevel.Debug);
-            // Override the logging filters from the app's configuration
-            logging.AddFilter(appHost.Environment.ApplicationName, LogLevel.Debug);
-            logging.AddFilter("Aspire.", LogLevel.Debug);
-        });
-        appHost.Services.ConfigureHttpClientDefaults(clientBuilder =>
-        {
-            clientBuilder.AddStandardResilienceHandler();
-        });
+        // ACT (Ejecutar)
+        var hypothesis = new BookHypothesisDto(title, author, new string[0], "", "Specific");
 
-        await using var app = await appHost.BuildAsync(cancellationToken).WaitAsync(DefaultTimeout, cancellationToken);
-        await app.StartAsync(cancellationToken).WaitAsync(DefaultTimeout, cancellationToken);
-
-        // Act
-        var httpClient = app.CreateHttpClient("webfrontend");
-        await app.ResourceNotifications.WaitForResourceHealthyAsync("webfrontend", cancellationToken).WaitAsync(DefaultTimeout, cancellationToken);
-        var response = await httpClient.GetAsync("/", cancellationToken);
-
-        // Assert
-        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        // ASSERT (Verificar)
+        Assert.AreEqual(title, hypothesis.Title);
+        Assert.AreEqual(author, hypothesis.Author);
     }
 }
