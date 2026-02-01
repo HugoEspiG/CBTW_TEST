@@ -1,19 +1,144 @@
 ﻿@page "/counter"
 @rendermode InteractiveServer
+@inject WeatherApiClient WeatherApi
+<PageTitle>Library AI Discovery</PageTitle>
 
-<PageTitle>Counter</PageTitle>
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h1 class="display-4 fw-bold text-primary">📚 Library Discovery</h1>
+        <p class="lead text-muted">AI-Powered Book Research Engine</p>
+    </div>
+    <div class="row justify-content-center mb-5">
+        <div class="col-md-8">
+            <div class="input-group input-group-lg shadow-sm">
+                <input type="text" @bind="messyInput" class="form-control" placeholder="Ex: find hobbit books by tolkien..." @onkeyup="HandleKeyUp" />
+                <button class="btn btn-primary px-4" @onclick="StartDiscovery" disabled="@isProcessing">
+                    @if (isProcessing)
+                    {
+                        <span class="spinner-border spinner-border-sm"></span>
+                    }
+                    else
+                    {
 
-<h1>Counter</h1>
+                        <span>Search</span>
+                    }
+                </button>
+            </div>
+            @if (!string.IsNullOrEmpty(statusMessage))
+            {
+                <div class="form-text mt-2 text-center text-primary">@statusMessage</div>
+            }
+        </div>
+    </div>
 
-<p role="status">Current count: @currentCount</p>
-
-<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+    @if (results != null && results.Any())
+    {
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <h3 class="mb-4">Ranked Results</h3>
+                @foreach (var book in results)
+                {
+                    <div class="card mb-3 shadow-sm border-0 border-start border-4 @GetBorderClass(book.MatchLevel)">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <h5 class="card-title fw-bold">@book.Title</h5>
+                                <span class="badge @GetBadgeClass(book.MatchLevel)">@book.MatchLevel</span>
+                            </div>
+                            <h6 class="card-subtitle mb-2 text-muted">@book.Author</h6>
+                            <p class="card-text italic mt-3 text-secondary">"@book.Explanation"</p>
+                            <a href="https://openlibrary.org@(book.OpenLibraryKey)" target="_blank" class="btn btn-sm btn-outline-primary mt-2">View Details</a>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
 
 @code {
-    private int currentCount = 0;
-
-    private void IncrementCount()
+    public class BookMatchResultDto
     {
-        currentCount++;
+        public BookMatchResultDto(int rank, string title, string author, string explanation, string openLibraryKey, string matchLevel)
+        {
+            Rank = rank;
+            Title = title;
+            Author = author;
+            Explanation = explanation;
+            OpenLibraryKey = openLibraryKey;
+            MatchLevel = matchLevel;
+        }
+
+        public int Rank { get; set; }
+        public string Title { get; set; }
+        public string Author { get; set; }
+        public string Explanation { get; set; }
+        public string OpenLibraryKey { get; set; }
+        public string MatchLevel { get; set; } // "Exact", "ContributorMatch", "Partial", "AuthorFallback"
+    };
+    public class WorkflowResultDto
+    {
+        public bool WasSuccess { get; set; }
+        public object? Result { get; set; }
+    };
+    private string messyInput = "";
+    private bool isProcessing = false;
+    private string statusMessage = "";
+    private List<BookMatchResultDto>? results;
+
+    protected override async Task OnInitializedAsync()
+    {
+
     }
+    private async Task StartDiscovery(MouseEventArgs args)
+    {
+        if (string.IsNullOrWhiteSpace(messyInput)) return;
+
+        isProcessing = true;
+        results = null;
+        statusMessage = "Analyzing query with Gemini AI...";
+        try
+        {
+            isProcessing = true;
+
+            // 1. Iniciar
+            string trackId = await WeatherApi.StartDiscoveryAsync(messyInput);
+
+            // 2. Polling
+            bool isCompleted = false;
+            while (!isCompleted)
+            {
+                await Task.Delay(2000);
+                isCompleted = await WeatherApi.GetStatusAsync(trackId);
+            }
+
+            // 3. Resultado
+            results = await WeatherApi.GetResultsAsync(trackId);
+        }
+        catch (Exception ex)
+        {
+            statusMessage = "Error: " + ex.Message;
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private void HandleKeyUp(KeyboardEventArgs e) { if (e.Key == "Enter") _ = StartDiscovery(new MouseEventArgs()); }
+
+    private string GetBorderClass(string level) => level switch
+    {
+        "Exact" => "border-success",
+        "ContributorMatch" => "border-info",
+        "Partial" => "border-warning",
+        _ => "border-secondary"
+    };
+
+    private string GetBadgeClass(string level) => level switch
+    {
+        "Exact" => "bg-success",
+        "ContributorMatch" => "bg-info text-dark",
+        "Partial" => "bg-warning text-dark",
+        _ => "bg-secondary"
+    };
 }

@@ -6,7 +6,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 builder.AddDapr();
 var DaprStateStore = builder.AddDaprStateStore("statestore");
-var apiService= builder.AddProject<Projects.CBTW_TEST_ApiService>("cbtw-test-api")
+var apiService= builder.AddProject<Projects.CBTW_TEST_ApiService>("apiservice")
     .WithEnvironment("DAPR_STATE_STORE_NAME", "statestore")
     .WithEnvironment("GEMINI_API_KEY", builder.Configuration["GEMINI_API_KEY"])
     .WithReference(DaprStateStore)
