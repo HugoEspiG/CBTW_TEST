@@ -31,39 +31,44 @@ namespace CBTW_TEST.Services.Http
         public async Task<List<OpenLibraryDocDto>> SearchBooksAsync(BookHypothesisDto hypothesis)
         {
             string stateStoreName = _configuration["DAPR_STATE_STORE_NAME"] ?? "statestore";
-            // Generamos una key única basada en la hipótesis (Title + Author)
             string cacheKey = $"search_{hypothesis.Title}_{hypothesis.Author}".Replace(" ", "_").ToLower();
 
             try
             {
-                // 1. Intento recuperar de caché
                 var cached = await _daprClient.GetStateAsync<List<OpenLibraryDocDto>>(stateStoreName, cacheKey);
                 if (cached != null) return cached;
 
-                // 2. Construcción de Query Params
-                var queryParams = new List<string>();
-                if (!string.IsNullOrEmpty(hypothesis.Title)) queryParams.Add($"title={Uri.EscapeDataString(hypothesis.Title)}");
-                if (!string.IsNullOrEmpty(hypothesis.Author)) queryParams.Add($"author={Uri.EscapeDataString(hypothesis.Author)}");
-
-                // Si es muy ambiguo, usamos q= (search general)
-                string url = $"/search.json?{string.Join("&", queryParams)}&limit=15";
-                if (queryParams.Count == 0) url = $"/search.json?q={Uri.EscapeDataString(hypothesis.Title ?? "library")}";
-
-                var response = await _client.GetFromJsonAsync<OpenLibrarySearchResponse>(url);
-                var docs = response?.Docs ?? new List<OpenLibraryDocDto>();
-
-                // 3. Guardar en caché (Time-to-live de 1 hora por ejemplo)
-                if (docs.Any())
+                List<OpenLibraryDocDto> docs = new();
+                if (!string.IsNullOrEmpty(hypothesis.Title) && !string.IsNullOrEmpty(hypothesis.Author))
                 {
-                    await _daprClient.SaveStateAsync(stateStoreName, cacheKey, docs,
-                        metadata: new Dictionary<string, string> { { "ttlInSeconds", "3600" } });
+                    string url = $"/search.json?title={Uri.EscapeDataString(hypothesis.Title)}&author={Uri.EscapeDataString(hypothesis.Author)}&limit=10";
+                    var response = await _client.GetFromJsonAsync<OpenLibrarySearchResponse>(url);
+                    docs = response?.Docs ?? new();
                 }
+                if (docs.Count == 0 && !string.IsNullOrEmpty(hypothesis.Title))
+                {
+                    _logger.LogInformation("Tier 1 failed. Falling back to Title-only search.");
+                    string url = $"/search.json?title={Uri.EscapeDataString(hypothesis.Title)}&limit=10";
+                    var response = await _client.GetFromJsonAsync<OpenLibrarySearchResponse>(url);
+                    docs = response?.Docs ?? new();
+                }
+                if (docs.Count == 0)
+                {
+                    _logger.LogInformation("Tier 2 failed. Falling back to General query.");
+                    string combined = $"{hypothesis.Title} {hypothesis.Author}".Trim();
+                    string url = $"/search.json?q={Uri.EscapeDataString(combined)}&limit=10";
+                    var response = await _client.GetFromJsonAsync<OpenLibrarySearchResponse>(url);
+                    docs = response?.Docs ?? new();
+                }
+
+                await _daprClient.SaveStateAsync(stateStoreName, cacheKey, docs,
+                    metadata: new Dictionary<string, string> { { "ttlInSeconds", "3600" } });
 
                 return docs;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error calling Open Library API");
+                _logger.LogError(ex, "Error calling Open Library API after tiered attempts");
                 return new List<OpenLibraryDocDto>();
             }
         }

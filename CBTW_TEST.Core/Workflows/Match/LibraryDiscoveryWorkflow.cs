@@ -16,19 +16,12 @@ namespace CBTW_TEST.Core.Workflows.Match
             var result = new WorkflowResultDto();
             try
             {
-                // 2. IA Activity: Parsear el blob desordenado a una hipótesis estructurada
-                // Gemini entra aquí para limpiar "mark huckleberry" -> { Title: "Huckleberry Finn", Author: "Mark Twain" }
                 var hypothesis = await context.CallActivityAsync<BookHypothesisDto>(
                     nameof(ExtractSearchEntitiesActivity), messyBlob);
 
-                // 3. API Activity: Buscar candidatos en Open Library
-                // Aquí normalizamos y consultamos la API REST
                 var rawCandidates = await context.CallActivityAsync<List<OpenLibraryDocDto>>(
                     nameof(SearchOpenLibraryActivity), hypothesis);
 
-                // 4. IA Activity: Rankear y Explicar
-                // Le pasamos la hipótesis original + los resultados para que la IA decida 
-                // quién es el "Primary Author" vs "Contributor" y genere el "Why it matched"
                 var rankedResults = await context.CallActivityAsync<List<BookMatchResultDto>>(
                     nameof(RankAndExplainActivity),
                     new RankingInputDto(hypothesis, rawCandidates));
@@ -41,14 +34,8 @@ namespace CBTW_TEST.Core.Workflows.Match
             }
             catch (Exception ex)
             {
-                // Logging de error técnico
-                result = new WorkflowResultDto { WasSuccess = false, ErrorMessage = ex.Message };
+                result = new WorkflowResultDto { WasSuccess = false, Result = ex.Message };
             }
-            finally
-            {
-                await context.CallActivityAsync(nameof(LogWorkflowCompletionActivity), context.InstanceId);
-            }
-
             return result;
         }
     }

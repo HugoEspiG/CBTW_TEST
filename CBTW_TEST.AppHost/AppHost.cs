@@ -8,8 +8,7 @@ builder.AddDapr();
 var DaprStateStore = builder.AddDaprStateStore("statestore");
 var apiService= builder.AddProject<Projects.CBTW_TEST_ApiService>("cbtw-test-api")
     .WithEnvironment("DAPR_STATE_STORE_NAME", "statestore")
-    .WithEnvironment("ZipCodeApiKey", "3NQEC3pmEhR5U91a7keGKXOw7wOdE5vTX2BAUkv3jRMTyjh4Kjs43urmmcadRDYt")
-    .WithEnvironment("AZURE_CLIENT_ID", builder.Configuration["AZURE_CLIENT_ID"])
+    .WithEnvironment("GEMINI_API_KEY", builder.Configuration["GEMINI_API_KEY"])
     .WithReference(DaprStateStore)
     .WithDaprSidecar(new DaprSidecarOptions
     {

@@ -1,35 +1,38 @@
-using Asp.Versioning;
 using CBTW_TEST.Core.Activities.Match;
 using CBTW_TEST.Core.Workflows.Match;
 using CBTW_TEST.Services.Http;
 using Dapr.Workflow;
-using Microsoft.AspNetCore.Authorization;
+using Google.GenAI;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.OpenApi.Models;
 using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddCors(options =>
 {
-options.AddDefaultPolicy(
-    policy =>
-{
-policy.AllowAnyHeader();
-policy.AllowAnyOrigin();
-policy.AllowAnyMethod();
-});
+    options.AddDefaultPolicy(
+        policy =>
+    {
+        policy.AllowAnyHeader();
+        policy.AllowAnyOrigin();
+        policy.AllowAnyMethod();
+    });
 });
 
 builder.AddServiceDefaults();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+var geminiAIKey = builder.Configuration.GetSection("GEMINI_API_KEY");
+var geminiAI =  new Client(apiKey:geminiAIKey.Value);
+builder.Services.AddSingleton(geminiAI);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddControllers();
 builder.Services.AddTransient<OpenLibraryApiClient>();
 builder.Services.AddDaprWorkflow(options =>
 {
     options.RegisterWorkflow<LibraryDiscoveryWorkflow>();
-    
+
     options.RegisterActivity<ExtractSearchEntitiesActivity>();
     options.RegisterActivity<SearchOpenLibraryActivity>();
     options.RegisterActivity<RankAndExplainActivity>();
@@ -37,12 +40,8 @@ builder.Services.AddDaprWorkflow(options =>
 
 
 builder.Services.AddLogging();
-
-
+builder.Services.AddSwaggerGen();
 var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-app.UseExceptionHandler();
 
 app.UseCors(policy =>
 {
@@ -54,9 +53,8 @@ app.UseCors(policy =>
 app.MapDefaultEndpoints();
 
 app.UseSwagger();
-
-app.UseHttpsRedirection();
-
+app.UseSwaggerUI();
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
@@ -64,7 +62,4 @@ app.MapControllers();
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+

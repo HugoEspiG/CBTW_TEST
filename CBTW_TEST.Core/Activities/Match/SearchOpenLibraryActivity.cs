@@ -27,9 +27,6 @@ namespace CBTW_TEST.Core.Activities.Match
 
             var results = await _apiClient.SearchBooksAsync(hypothesis);
 
-            // Aquí podríamos aplicar la normalización de diacríticos si fuera necesario 
-            // antes de devolver los resultados al workflow.
-
             return results;
         }
     }

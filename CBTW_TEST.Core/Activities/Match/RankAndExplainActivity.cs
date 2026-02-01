@@ -31,42 +31,57 @@ namespace CBTW_TEST.Core.Activities.Match
                 ResponseMimeType = "application/json"
             };
 
+            string jsonSchema = """
+                    {
+                        "Rank": 1,
+                        "Title": "Example Title",
+                        "Author": "Example Author",
+                        "Explanation": "Example Explanation",
+                        "OpenLibraryKey": "/works/OL12345W",
+                        "MatchLevel": "Exact"
+                    }
+                    """;
+
             string systemPrompt = $"""
-            You are a Senior Library Data Analyst. Your goal is to rank book candidates based on a user's search hypothesis.
-            
-            USER HYPOTHESIS:
-            Title: {input.Hypothesis.Title}
-            Author: {input.Hypothesis.Author}
-            Keywords: {string.Join(", ", input.Hypothesis.Keywords)}
+                You are a Senior Library Data Analyst. Your absolute priority is ACCURACY.
+    
+                USER HYPOTHESIS:
+                - Title: {input.Hypothesis.Title}
+                - Author: {input.Hypothesis.Author}
 
-            RANKING HIERARCHY (Priority 1 is highest):
-            1. Exact Title + Primary Author Match.
-            2. Exact Title + Contributor Match (author is an illustrator, editor, etc.).
-            3. Near-match/Fuzzy Title + Author Match.
-            4. Author-only match (Return top works by this author).
+                STRICT RANKING RULES:
+                1. Exact: Title matches AND Author matches (Primary).
+                2. ContributorMatch: Title matches AND Author is a contributor/editor.
+                3. Partial: 
+                   - Use this if Title matches but Author is COMPLETELY DIFFERENT. 
+                   - Use this for fuzzy title matches with correct author.
+                4. AuthorFallback: Title does not match, but it is a work by the requested Author.
 
-            INSTRUCTIONS:
-            - Compare the Hypothesis against the provided list of Open Library candidates.
-            - For each candidate, explain WHY it matched in 1-2 ffactual sentences.
-            - Mention if the author is the primary one or just a contributor.
-            - Return a JSON array of the top 5 BookMatchResultDto objects.
-            """;
+                CRITICAL LOGIC FOR DISCREPANCIES:
+                - If Title matches but the Candidate's Author is NOT the one requested, you MUST use 'Partial'. 
+                - In the 'Explanation', explicitly state: "Title match found, but author mismatch (Requested: {input.Hypothesis.Author}, Found: Candidate Author)".
+    
+                OUTPUT: JSON ARRAY of {jsonSchema}
+                """;
 
             var userMessage = $"Candidates from Open Library: {JsonSerializer.Serialize(input.RawCandidates)}";
 
             try
             {
                 var response = await _geminiClient.Models.GenerateContentAsync(
-                    model: "gemini-1.5-flash",
+                    model: "gemini-2.5-flash-lite",
                     contents: new List<Content> {
-                    new Content { Role = "user", Parts = new List<Part> { new Part { Text = systemPrompt + "\n" + userMessage } } }
+                new Content {
+                    Role = "user",
+                    Parts = new List<Part> { new Part { Text = systemPrompt + "\n" + userMessage } }
+                }
                     },
                     config: config
                 );
 
                 var rawJson = response.Candidates[0].Content.Parts[0].Text;
-                var results = JsonSerializer.Deserialize<List<BookMatchResultDto>>(rawJson,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var results = JsonSerializer.Deserialize<List<BookMatchResultDto>>(rawJson, options);
 
                 return results ?? new List<BookMatchResultDto>();
             }

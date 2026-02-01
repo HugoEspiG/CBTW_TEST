@@ -25,10 +25,9 @@ namespace CBTW_TEST.Core.Activities.Match
 
         public override async Task<BookHypothesisDto> RunAsync(WorkflowActivityContext context, string messyBlob)
         {
-            // Configuramos Gemini para que responda estrictamente en JSON
             var config = new GenerateContentConfig
             {
-                Temperature = 0.1f, // Baja temperatura para mayor precisión técnica
+                Temperature = 0.1f, 
                 ResponseMimeType = "application/json"
             };
 
@@ -45,14 +44,13 @@ namespace CBTW_TEST.Core.Activities.Match
             try
             {
                 var response = await _geminiClient.Models.GenerateContentAsync(
-                    model: "gemini-2.5-flash",
+                    model: "gemini-2.5-flash-lite",
                     contents: prompt,
                     config: config
                 );
                    
                 var rawJson = response.Candidates[0].Content.Parts[0].Text;
 
-                // Usamos System.Text.Json con CaseInsensitive por seguridad
                 var result = JsonSerializer.Deserialize<BookHypothesisDto>(rawJson,
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
@@ -61,7 +59,6 @@ namespace CBTW_TEST.Core.Activities.Match
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Gemini Extraction Failed for blob: {blob}", messyBlob);
-                // Estrategia de Fallback: devolvemos el blob como título para no detener el workflow
                 return new BookHypothesisDto(messyBlob, string.Empty, Enumerable.Empty<string>().ToArray(), string.Empty, string.Empty);
             }
         }
