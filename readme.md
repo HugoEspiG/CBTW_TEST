@@ -16,7 +16,7 @@ Before running the project, ensure you have the following installed:
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/HatchleafEngineering/provider-iq-platform.git
+git clone https://github.com/HugoEspiG/CBTW_TEST.git
 cd src
 ```
 ### 2. Initialize Dapr locally with Docker
