@@ -30,11 +30,16 @@ namespace CBTW_TEST.Services.Http
 
         public async Task<List<OpenLibraryDocDto>> SearchBooksAsync(BookHypothesisDto hypothesis)
         {
-            string stateStoreName = _configuration["DAPR_STATE_STORE_NAME"] ?? "statestore";
-            string cacheKey = $"search_{hypothesis.Title}_{hypothesis.Author}".Replace(" ", "_").ToLower();
-
             try
             {
+                if (string.IsNullOrEmpty(hypothesis.Title) && string.IsNullOrEmpty(hypothesis.Author))
+                {
+                    throw new ArgumentNullException(nameof(hypothesis));
+                }
+                string stateStoreName = _configuration["DAPR_STATE_STORE_NAME"] ?? "statestore";
+                string cacheKey = $"search_{hypothesis.Title}_{hypothesis.Author}".Replace(" ", "_").ToLower();
+
+
                 var cached = await _daprClient.GetStateAsync<List<OpenLibraryDocDto>>(stateStoreName, cacheKey);
                 if (cached != null) return cached;
 

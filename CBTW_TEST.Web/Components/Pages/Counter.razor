@@ -112,7 +112,16 @@
             }
 
             // 3. Resultado
-            results = await WeatherApi.GetResultsAsync(trackId);
+            var result = await WeatherApi.GetResultsAsync(trackId);
+            if (result != null && result is List<BookMatchResultDto> bookResults)
+            {
+                results = bookResults.OrderBy(b => b.Rank).ToList();
+                statusMessage = $"Found {results.Count} results.";
+            }
+            else
+            {
+                throw new Exception("Invalid result format from API.");
+            }
         }
         catch (Exception ex)
         {

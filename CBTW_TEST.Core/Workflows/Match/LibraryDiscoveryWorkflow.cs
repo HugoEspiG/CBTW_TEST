@@ -22,6 +22,14 @@ namespace CBTW_TEST.Core.Workflows.Match
                 var rawCandidates = await context.CallActivityAsync<List<OpenLibraryDocDto>>(
                     nameof(SearchOpenLibraryActivity), hypothesis);
 
+                if (!rawCandidates.Any())
+                {
+                    return new WorkflowResultDto
+                    {
+                        WasSuccess = true,
+                        Result = new List<BookMatchResultDto>()
+                    };
+                }
                 var rankedResults = await context.CallActivityAsync<List<BookMatchResultDto>>(
                     nameof(RankAndExplainActivity),
                     new RankingInputDto(hypothesis, rawCandidates));

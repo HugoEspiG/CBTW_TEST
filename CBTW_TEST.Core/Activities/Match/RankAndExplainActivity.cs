@@ -88,7 +88,7 @@ namespace CBTW_TEST.Core.Activities.Match
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during Ranking and Explanation phase.");
-                return new List<BookMatchResultDto>();
+                throw new Exception(ex.Message);
             }
         }
     }
