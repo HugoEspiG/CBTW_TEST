@@ -1,5 +1,5 @@
 ﻿using CBTW_TEST.Domain.Models.Dto;
-using Dapr.Client;
+using Microsoft.Extensions.Caching.Memory; // Sustituye a Dapr
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace CBTW_TEST.Services.Http
@@ -15,16 +14,17 @@ namespace CBTW_TEST.Services.Http
     public class OpenLibraryApiClient
     {
         private readonly HttpClient _client;
-        private readonly DaprClient _daprClient;
-        private readonly IConfiguration _configuration;
+        private readonly IMemoryCache _cache;
         private readonly ILogger<OpenLibraryApiClient> _logger;
 
-        public OpenLibraryApiClient(IHttpClientFactory clientFactory, DaprClient daprClient, IConfiguration configuration, ILogger<OpenLibraryApiClient> logger)
+        // Cambiamos IHttpClientFactory por HttpClient directamente
+        public OpenLibraryApiClient(
+            HttpClient client,
+            IMemoryCache cache,
+            ILogger<OpenLibraryApiClient> logger)
         {
-            _client = clientFactory.CreateClient();
-            _client.BaseAddress = new Uri("https://openlibrary.org/");
-            _daprClient = daprClient;
-            _configuration = configuration;
+            _client = client;
+            _cache = cache;
             _logger = logger;
         }
 
@@ -36,20 +36,28 @@ namespace CBTW_TEST.Services.Http
                 {
                     throw new ArgumentNullException(nameof(hypothesis));
                 }
-                string stateStoreName = _configuration["DAPR_STATE_STORE_NAME"] ?? "statestore";
+
+                // Generamos la misma lógica de key que tenías
                 string cacheKey = $"search_{hypothesis.Title}_{hypothesis.Author}".Replace(" ", "_").ToLower();
 
-
-                var cached = await _daprClient.GetStateAsync<List<OpenLibraryDocDto>>(stateStoreName, cacheKey);
-                if (cached != null) return cached;
+                // 1. Intentar obtener del caché de memoria (Sustituye a GetStateAsync)
+                if (_cache.TryGetValue(cacheKey, out List<OpenLibraryDocDto>? cachedDocs))
+                {
+                    _logger.LogInformation("Cache hit for key: {cacheKey}", cacheKey);
+                    return cachedDocs ?? new();
+                }
 
                 List<OpenLibraryDocDto> docs = new();
+
+                // Tier 1: Title + Author
                 if (!string.IsNullOrEmpty(hypothesis.Title) && !string.IsNullOrEmpty(hypothesis.Author))
                 {
                     string url = $"/search.json?title={Uri.EscapeDataString(hypothesis.Title)}&author={Uri.EscapeDataString(hypothesis.Author)}&limit=10";
                     var response = await _client.GetFromJsonAsync<OpenLibrarySearchResponse>(url);
                     docs = response?.Docs ?? new();
                 }
+
+                // Tier 2: Title Only
                 if (docs.Count == 0 && !string.IsNullOrEmpty(hypothesis.Title))
                 {
                     _logger.LogInformation("Tier 1 failed. Falling back to Title-only search.");
@@ -57,6 +65,8 @@ namespace CBTW_TEST.Services.Http
                     var response = await _client.GetFromJsonAsync<OpenLibrarySearchResponse>(url);
                     docs = response?.Docs ?? new();
                 }
+
+                // Tier 3: General Query
                 if (docs.Count == 0)
                 {
                     _logger.LogInformation("Tier 2 failed. Falling back to General query.");
@@ -66,8 +76,12 @@ namespace CBTW_TEST.Services.Http
                     docs = response?.Docs ?? new();
                 }
 
-                await _daprClient.SaveStateAsync(stateStoreName, cacheKey, docs,
-                    metadata: new Dictionary<string, string> { { "ttlInSeconds", "3600" } });
+                // 2. Guardar en caché de memoria (Sustituye a SaveStateAsync)
+                // Usamos un TTL de 1 hora como tenías en Dapr
+                var cacheEntryOptions = new MemoryCacheEntryOptions()
+                    .SetAbsoluteExpiration(TimeSpan.FromHours(1));
+
+                _cache.Set(cacheKey, docs, cacheEntryOptions);
 
                 return docs;
             }

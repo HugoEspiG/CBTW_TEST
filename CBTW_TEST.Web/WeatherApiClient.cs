@@ -25,32 +25,22 @@ public class WeatherApiClient(HttpClient httpClient)
         return forecasts?.ToArray() ?? [];
     }
 
-    public async Task<string> StartDiscoveryAsync(string messyInput)
+    public async Task<List<BookMatchResultDto>> StartDiscoveryAsync(string messyInput)
     {
         var response = await httpClient.PostAsync($"/?messyInput={Uri.EscapeDataString(messyInput)}", null);
         response.EnsureSuccessStatusCode();
+        var workflowResult = await response.Content.ReadFromJsonAsync<WorkflowResultDto>();
+        if (workflowResult == null || !workflowResult.WasSuccess)
+        {
+            throw new Exception("The AI Discovery engine failed to process the request.");
+        }
+        if (workflowResult.Result == null) return new List<BookMatchResultDto>();
 
-        var data = await response.Content.ReadFromJsonAsync<JsonElement>();
-        return data.GetProperty("trackId").GetString() ?? throw new Exception("No TrackId received");
-    }
+        var jsonString = workflowResult.Result.ToString();
+        var results = JsonSerializer.Deserialize<List<BookMatchResultDto>>(jsonString,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-    public async Task<bool> GetStatusAsync(string trackId)
-    {
-        var response = await httpClient.GetFromJsonAsync<JsonElement>($"/status/{trackId}");
-        var isCompleted = response.GetProperty("isWorkflowCompleted").GetBoolean();
-        return isCompleted;
-    }
-
-    public async Task<List<BookMatchResultDto>> GetResultsAsync(string trackId)
-    {
-        var response = await httpClient.GetFromJsonAsync<WorkflowResultDto>($"/WorkflowResult/{trackId}");
-
-        if (response?.Result == null) return new List<BookMatchResultDto>();
-
-        // Deserialización segura de JsonElement a nuestra lista
-        var jsonString = response.Result.ToString();
-        return JsonSerializer.Deserialize<List<BookMatchResultDto>>(jsonString,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
+        return results ?? new List<BookMatchResultDto>();
     }
 }
 

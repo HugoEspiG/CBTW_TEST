@@ -1,28 +1,29 @@
 ﻿using CBTW_TEST.Core.Activities.Match;
+using CBTW_TEST.Domain.Interfaces;
 using CBTW_TEST.Domain.Models.Dto;
-using Dapr.Workflow;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CBTW_TEST.Core.Workflows.Match
+namespace CBTW_TEST.Core.LibraryDiscover
 {
-    public class LibraryDiscoveryWorkflow : Workflow<string, WorkflowResultDto>
+    public class LibraryDiscoveryService(
+            ExtractSearchEntitiesActivity extractActivity,
+            SearchOpenLibraryActivity searchActivity,
+            RankAndExplainActivity rankActivity) : ILibraryDiscoveryService
     {
-        public override async Task<WorkflowResultDto> RunAsync(WorkflowContext context, string messyBlob)
+        public async Task<WorkflowResultDto> ExecuteDiscoveryAsync(string messyBlob)
         {
             var result = new WorkflowResultDto();
             try
             {
-                var hypothesis = await context.CallActivityAsync<BookHypothesisDto>(
-                    nameof(ExtractSearchEntitiesActivity), messyBlob);
+                var hypothesis = await extractActivity.RunAsync(messyBlob);
 
-                var rawCandidates = await context.CallActivityAsync<List<OpenLibraryDocDto>>(
-                    nameof(SearchOpenLibraryActivity), hypothesis);
+                var rawCandidates = await searchActivity.RunAsync(hypothesis);
 
-                if (!rawCandidates.Any())
+                if (rawCandidates == null || !rawCandidates.Any())
                 {
                     return new WorkflowResultDto
                     {
@@ -30,9 +31,9 @@ namespace CBTW_TEST.Core.Workflows.Match
                         Result = new List<BookMatchResultDto>()
                     };
                 }
-                var rankedResults = await context.CallActivityAsync<List<BookMatchResultDto>>(
-                    nameof(RankAndExplainActivity),
-                    new RankingInputDto(hypothesis, rawCandidates));
+
+                // 3. Ranking y Explicación (Gemini)
+                var rankedResults = await rankActivity.RunAsync(new RankingInputDto(hypothesis, rawCandidates));
 
                 result = new WorkflowResultDto
                 {

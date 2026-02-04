@@ -100,19 +100,8 @@
         {
             isProcessing = true;
 
-            // 1. Iniciar
-            string trackId = await WeatherApi.StartDiscoveryAsync(messyInput);
+            var result = await WeatherApi.StartDiscoveryAsync(messyInput);
 
-            // 2. Polling
-            bool isCompleted = false;
-            while (!isCompleted)
-            {
-                await Task.Delay(2000);
-                isCompleted = await WeatherApi.GetStatusAsync(trackId);
-            }
-
-            // 3. Resultado
-            var result = await WeatherApi.GetResultsAsync(trackId);
             if (result != null && result is List<BookMatchResultDto> bookResults)
             {
                 results = bookResults.OrderBy(b => b.Rank).ToList();

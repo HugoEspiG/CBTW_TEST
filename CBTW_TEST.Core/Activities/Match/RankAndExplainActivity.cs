@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace CBTW_TEST.Core.Activities.Match
 {
-    public class RankAndExplainActivity : WorkflowActivity<RankingInputDto, List<BookMatchResultDto>>
+    public class RankAndExplainActivity
     {
         private readonly Client _geminiClient;
         private readonly ILogger<RankAndExplainActivity> _logger;
@@ -23,7 +23,7 @@ namespace CBTW_TEST.Core.Activities.Match
             _logger = logger;
         }
 
-        public override async Task<List<BookMatchResultDto>> RunAsync(WorkflowActivityContext context, RankingInputDto input)
+        public async Task<List<BookMatchResultDto>> RunAsync(RankingInputDto input)
         {
             var config = new GenerateContentConfig
             {
@@ -65,31 +65,22 @@ namespace CBTW_TEST.Core.Activities.Match
                 """;
 
             var userMessage = $"Candidates from Open Library: {JsonSerializer.Serialize(input.RawCandidates)}";
-
-            try
-            {
-                var response = await _geminiClient.Models.GenerateContentAsync(
-                    model: "gemini-2.5-flash-lite",
-                    contents: new List<Content> {
+            var response = await _geminiClient.Models.GenerateContentAsync(
+                model: "gemini-2.5-flash-lite",
+                contents: new List<Content> {
                 new Content {
                     Role = "user",
                     Parts = new List<Part> { new Part { Text = systemPrompt + "\n" + userMessage } }
                 }
-                    },
-                    config: config
-                );
+                },
+                config: config
+            );
 
-                var rawJson = response.Candidates[0].Content.Parts[0].Text;
-                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                var results = JsonSerializer.Deserialize<List<BookMatchResultDto>>(rawJson, options);
+            var rawJson = response.Candidates[0].Content.Parts[0].Text;
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var results = JsonSerializer.Deserialize<List<BookMatchResultDto>>(rawJson, options);
 
-                return results ?? new List<BookMatchResultDto>();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error during Ranking and Explanation phase.");
-                throw new Exception(ex.Message);
-            }
+            return results ?? new List<BookMatchResultDto>();
         }
     }
 }

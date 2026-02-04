@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace CBTW_TEST.Core.Activities.Match
 {
-    public class SearchOpenLibraryActivity : WorkflowActivity<BookHypothesisDto, List<OpenLibraryDocDto>>
+    public class SearchOpenLibraryActivity
     {
         private readonly OpenLibraryApiClient _apiClient;
         private readonly ILogger<SearchOpenLibraryActivity> _logger;
@@ -21,7 +21,7 @@ namespace CBTW_TEST.Core.Activities.Match
             _logger = logger;
         }
 
-        public override async Task<List<OpenLibraryDocDto>> RunAsync(WorkflowActivityContext context, BookHypothesisDto hypothesis)
+        public async Task<List<OpenLibraryDocDto>> RunAsync(BookHypothesisDto hypothesis)
         {
             _logger.LogInformation("Searching Open Library for Title: {Title}, Author: {Author}", hypothesis.Title, hypothesis.Author);
 

@@ -1,5 +1,6 @@
 using CBTW_TEST.Core.Activities.Match;
-using CBTW_TEST.Core.Workflows.Match;
+using CBTW_TEST.Core.LibraryDiscover;
+using CBTW_TEST.Domain.Interfaces;
 using CBTW_TEST.Services.Http;
 using Dapr.Workflow;
 using Google.GenAI;
@@ -27,16 +28,15 @@ var geminiAIKey = builder.Configuration.GetSection("GEMINI_API_KEY");
 var geminiAI =  new Client(apiKey:geminiAIKey.Value);
 builder.Services.AddSingleton(geminiAI);
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddControllers();
-builder.Services.AddTransient<OpenLibraryApiClient>();
-builder.Services.AddDaprWorkflow(options =>
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient<OpenLibraryApiClient>(client =>
 {
-    options.RegisterWorkflow<LibraryDiscoveryWorkflow>();
-
-    options.RegisterActivity<ExtractSearchEntitiesActivity>();
-    options.RegisterActivity<SearchOpenLibraryActivity>();
-    options.RegisterActivity<RankAndExplainActivity>();
+    client.BaseAddress = new Uri("https://openlibrary.org/");
 });
+builder.Services.AddScoped<ExtractSearchEntitiesActivity>();
+builder.Services.AddScoped<SearchOpenLibraryActivity>();
+builder.Services.AddScoped<RankAndExplainActivity>();
+builder.Services.AddScoped<ILibraryDiscoveryService, LibraryDiscoveryService>();
 
 
 builder.Services.AddLogging();

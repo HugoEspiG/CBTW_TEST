@@ -1,88 +1,49 @@
-﻿using CBTW_TEST.Core.Workflows.Match;
+﻿using CBTW_TEST.Domain.Interfaces;
 using CBTW_TEST.Domain.Models.Dto;
 using Dapr.Workflow;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Cryptography;
-using static Google.Rpc.Context.AttributeContext.Types;
 
 namespace CBTW_TEST.ApiService.Controllers
 {
     public class AgentController : ControllerBase
     {
         private readonly ILogger<AgentController> _logger;
-        private readonly DaprWorkflowClient _daprWorkflowClient;
-
-        public AgentController(ILogger<AgentController> logger, DaprWorkflowClient daprWorkflowClient)
+        private readonly ILibraryDiscoveryService _libraryDiscoveryService;
+        public AgentController(ILogger<AgentController> logger, ILibraryDiscoveryService libraryDiscoveryService)
         {
             _logger = logger;
-            _daprWorkflowClient = daprWorkflowClient;
+            _libraryDiscoveryService = libraryDiscoveryService;
         }
 
         [HttpPost("")]
         public async Task<ActionResult> Create([FromQuery] string messyInput)
         {
+            if (string.IsNullOrWhiteSpace(messyInput))
+            {
+                return BadRequest("Input cannot be empty.");
+            }
+
             try
             {
-                var workflowId = Guid.NewGuid().ToString();
+                _logger.LogInformation("Starting direct AI discovery for input: {Input}", messyInput);
 
-                _logger.LogInformation("Scheduling workflow with ID: {WorkflowId}", workflowId);
-                await _daprWorkflowClient.ScheduleNewWorkflowAsync(name: nameof(LibraryDiscoveryWorkflow), instanceId: workflowId, input: messyInput);
-                WorkflowState state = await _daprWorkflowClient.WaitForWorkflowStartAsync(instanceId: workflowId);
+                var result = await _libraryDiscoveryService.ExecuteDiscoveryAsync(messyInput);
 
-                _logger.LogInformation("Workflow started with ID: {WorkflowId}, Workflow State: {WorkflowState}", workflowId, state);
-                return new AcceptedResult($"api/v1/workflows/Status/{workflowId}", new { TrackId = workflowId, WorkflowState = state, StatusPath = $"api/v1/workflows/status/{workflowId}", ResultPath = $"api/v1/workflows/WorkflowResult/{workflowId}" });
-            }
-            catch (BadHttpRequestException ex)
-            {
-                _logger.LogError(ex, "Bad request while processing Book Match");
-                return BadRequest(ex.Message);
-            }
-        }
+                if (!result.WasSuccess)
+                {
+                    _logger.LogWarning("Discovery failed: {Message}", result.Result);
+                    return BadRequest(result);
+                }
 
-        [HttpGet("Status/{id}")]
-        public async Task<ActionResult<WorkflowState>> GetWorkFlowStatus(string id)
-        {
-            try
-            {
-                var wfStatus = await _daprWorkflowClient.GetWorkflowStateAsync(id);
-                _logger.LogInformation("Workflow status for {WorkflowId}: Exists={Exists}, IsCompleted={IsCompleted}, FailureDetails={FailureDetails}", id, wfStatus.Exists, wfStatus.IsWorkflowCompleted, wfStatus.FailureDetails);
-                return Ok(wfStatus);
+                _logger.LogInformation("Discovery completed successfully.");
+
+                return Ok(result);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, $"No Workflow exists with id: {id}");
-                return BadRequest($"No Workflow exists with id: {id}");
+                _logger.LogError(ex, "Error processing Book Match discovery");
+                return BadRequest("An internal error occurred while processing your request.");
             }
-        }
-
-        [HttpGet("WorkflowResult/{id}")]
-        public async Task<ActionResult<WorkflowResultDto>> GetActionResultAsync(string id)
-        {
-            try
-            {
-                var wfStatus = await _daprWorkflowClient.GetWorkflowStateAsync(id);
-                if (wfStatus.Exists && wfStatus.FailureDetails != null)
-                {
-                    _logger.LogError("Workflow {WorkflowId} failed with error: {ErrorMessage}", id, wfStatus.FailureDetails.ErrorMessage);
-                    return BadRequest(wfStatus.FailureDetails.ErrorMessage);
-                }
-
-                var wfResult = wfStatus.ReadOutputAs<WorkflowResultDto>();
-                if (!wfStatus.Exists)
-                {
-                    _logger.LogWarning("Workflow {WorkflowId} does not exist.", id);
-                    return BadRequest();
-                }
-                _logger.LogInformation("Workflow {WorkflowId} is still running.", id);
-                return Ok(wfResult);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, $"No Workflow exists with id: {id}");
-                return BadRequest($"No Workflow exists with id: {id}");
-            }
-
         }
 
     }
