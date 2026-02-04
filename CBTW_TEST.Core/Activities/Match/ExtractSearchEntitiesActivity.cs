@@ -1,12 +1,17 @@
 ﻿using CBTW_TEST.Domain.Models.Dto;
+using Dapr.Workflow;
 using Google.GenAI;
 using Google.GenAI.Types;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace CBTW_TEST.Core.Activities.Match
 {
-    // Eliminamos la herencia de Dapr y la convertimos en una clase normal
     public class ExtractSearchEntitiesActivity
     {
         private readonly ILogger<ExtractSearchEntitiesActivity> _logger;
@@ -35,10 +40,8 @@ namespace CBTW_TEST.Core.Activities.Match
 
             Constraint: If the query is a character (e.g., 'Huckleberry'), map it to the book title ('Huckleberry Finn').
             """;
-
-            // Mantenemos tu lógica de Gemini intacta
             var response = await _geminiClient.Models.GenerateContentAsync(
-                model: "gemini-2.0-flash-lite", // Nota: Corregí a 2.0 que es la versión común, ajusta si usas una preview específica
+                model: "gemini-2.5-flash-lite",
                 contents: prompt,
                 config: config
             );
